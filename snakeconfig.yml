@@ -1,0 +1,2 @@
+resources:
+  jobs_per_gpu: 5
