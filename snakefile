@@ -6,8 +6,15 @@ audio_path = "/cache/nikolal/parlaspeech-hr/repository"
 audio_segment_path ="data/segments/"
 """
 export CUDA_VISIBLE_DEVICES=4;
-snakemake -j 100 --use-conda --resources jobs_per_gpu=5
+snakemake -j 100 --use-conda --rerun-incomplete --resources jobs_per_gpu=5 --batch gather=1/3;
+snakemake -j 100 --use-conda --rerun-incomplete --resources jobs_per_gpu=5 --batch gather=5/6;
+snakemake -j 100 --use-conda --rerun-incomplete --resources jobs_per_gpu=5 --batch gather=8/9;
+snakemake -j 100 --use-conda --rerun-incomplete --resources jobs_per_gpu=5 --batch gather=17/18;
+snakemake -j 100 --use-conda --rerun-incomplete --resources jobs_per_gpu=5 -k
 
+# Other gpu:
+export CUDA_VISIBLE_DEVICES=2;
+snakemake -j 100 --use-conda --rerun-incomplete --resources jobs_per_gpu=5 --batch gather=2/3;
 """
 
 configfile: "snakeconfig.yml"
