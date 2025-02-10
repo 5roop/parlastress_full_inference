@@ -5,7 +5,7 @@ hashes = [i.name.split(".")[0] for i in input_files]
 audio_path = "/cache/nikolal/parlaspeech-hr/repository"
 audio_segment_path ="data/segments/"
 """
-export CUDA_VISIBLE_DEVICES=6;
+export CUDA_VISIBLE_DEVICES=4;
 snakemake -j 100 --use-conda --resources jobs_per_gpu=5
 
 """
