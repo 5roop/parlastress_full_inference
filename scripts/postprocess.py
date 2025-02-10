@@ -11,7 +11,11 @@ import polars as pl
 import numpy as np
 
 pl.Config.set_tbl_cols(-1)
+<<<<<<< HEAD
 pl.Config.set_tbl_width_chars(600)
+=======
+pl.Config.set_tbl_width_chars(700)
+>>>>>>> 067fecb8ce717d1352404dbc8c58e573a68c088a
 pl.Config.set_fmt_str_lengths(50)
 
 
