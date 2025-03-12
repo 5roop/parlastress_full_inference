@@ -24,10 +24,11 @@ import numpy as np
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
+    print("Inferring on cuda")
 else:
     device = torch.device("cpu")
 
-model_name = "../parlastress/model_primstress_1e-5_20_1/checkpoint-6540"
+model_name = "../parlastress/model_primstress_1e-5_20_1/checkpoint-4251"
 feature_extractor = AutoFeatureExtractor.from_pretrained(model_name)
 model = Wav2Vec2BertForAudioFrameClassification.from_pretrained(model_name).to(device)
 
@@ -50,7 +51,7 @@ def frames_to_intervals(frames: list[int]) -> list[tuple[float]]:
             pass
         else:
             results.append(
-                (round(ndf.loc[si, "time_s"], 3), round(ndf.loc[ei - 1, "time_s"], 3))
+                (round(ndf.loc[si, "time_s"], 3), round(ndf.loc[ei, "time_s"], 3))
             )
     if results == []:
         return None
