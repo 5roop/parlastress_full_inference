@@ -2,8 +2,8 @@ try:
     injson = snakemake.input.jsonl
     output = snakemake.output.jsonl
 except NameError:
-    injson = "data/prep_segments/HR/_A6u1Hz02e8.jsonl"
-    output = "data/inferred/HR/_A6u1Hz02e8.jsonl"
+    injson = "data/prep_segments/HR/goZfMp5DWCg.jsonl"
+    output = "brisi.jsonl"
 
 import polars as pl
 from pathlib import Path
@@ -92,10 +92,21 @@ ds = Dataset.from_pandas(df.to_pandas()).cast_column("audio", Audio(16000, mono=
 for i in ds:
     if i["audio"] is None:
         print(i)
-ds = ds.map(evaluator, batched=True, batch_size=1)
-
-ds.to_polars().select(["segment_files", "id", "primary_stress"]).write_ndjson(output)
 from tqdm import tqdm
+
+try:
+    ds = ds.map(evaluator, batched=True, batch_size=1)
+    ds.to_polars().select(["segment_files", "id", "primary_stress"]).write_ndjson(
+        output
+    )
+except TypeError:
+    ps = []
+    for i in tqdm(range(len(ds)), total=len(ds)):
+        ps.append(evaluator(ds[i : i + 1])["primary_stress"])
+    ds.to_polars().with_columns(
+        primary_stress=ps,
+    ).select(["segment_files", "id", "primary_stress"]).write_ndjson(output)
+
 
 for i in tqdm(df["audio"].to_list(), desc="Removing segments"):
     Path(i).unlink()
