@@ -1,24 +1,31 @@
 try:
     injson = snakemake.input.jsonl
     output = snakemake.output.jsonl
-    audio_path = snakemake.params.audio_path
+    audio_path_hr = snakemake.params.audio_path_hr
+    audio_path_rs = snakemake.params.audio_path_rs
     audio_segment_path = snakemake.params.audio_segment_path
 except NameError:
-    injson = "data/filtered/1fkDdyeFZoU.jsonl"
-    output = "data/prep_segments/1fkDdyeFZoU.jsonl"
-    audio_path = "/cache/nikolal/parlaspeech-hr/repository"
+    injson = "data/filtered/HR/_fxXNGLg-4U.jsonl"
+    output = "data/prep_segments/_fxXNGLg-4U.jsonl"
+    audio_path_hr = "/cache/peterr/ParlaSpeeches/ParlaSpeech-HR/"
+    audio_path_rs = "/cache/peterr/ParlaSpeeches/ParlaSpeech-RS/"
     audio_segment_path = "data/segments/"
 
 import polars as pl
 from pathlib import Path
 from pydub import AudioSegment
-from tqdm import tqdm
 
 pl.Config.set_tbl_cols(-1)
 pl.Config.set_tbl_width_chars(900)
 df = pl.read_ndjson(injson)
+if df["id"].str.starts_with("ParlaMint-HR").all():
+    df = df.with_columns((audio_path_hr + "/" + pl.col("audio")).alias("audio"))
+elif df["id"].str.starts_with("ParlaMint-RS").all():
+    df = df.with_columns((audio_path_rs + "/" + pl.col("audio")).alias("audio"))
+else:
+    raise AttributeError("IDs do not seem to start with either RS or HR!")
 
-df = df.with_columns((audio_path + "/" + pl.col("audio")).alias("audio"))
+
 assert (
     df["audio"].map_elements(lambda s: Path(s).exists(), return_dtype=pl.Boolean).all()
 ), "Missing flacs!"
@@ -38,7 +45,8 @@ def get_segment_names(row) -> list[str]:
     audio = AudioSegment.from_file(row["audio"])
     for i in indices:
         path = Path(audio_segment_path, audio_basename + f"_{i}.wav")
-        if path.exists():
+        # if path.exists():
+        if False:
             pass
         else:
             w = row["words_align"][i]
@@ -49,6 +57,10 @@ def get_segment_names(row) -> list[str]:
         results.append(str(path))
     return results
 
+
+# df = df.filter(pl.col("id").eq("ParlaMint-HR_2016-02-03-0.u1815_1111-1302"))
+# for row in df.iter_rows(named=True):
+#     get_segment_names(row)
 
 df = df.with_columns(
     pl.struct(["words_align", "multisyllabic_words", "audio"])

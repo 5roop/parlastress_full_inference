@@ -3,9 +3,9 @@ try:
     original = snakemake.input.original
     output = snakemake.output[0]
 except NameError as e:
-    predictions = "data/inferred/A44UFMcUAMU.jsonl"
-    original = "data/input/A44UFMcUAMU.prep.jsonl"
-    output = "data/postprocessed/A44UFMcUAMU.jsonl"
+    predictions = "data/inferred/HR/U8TNjDSZquc.jsonl"
+    original = "data/input/HR/U8TNjDSZquc.prep.jsonl"
+    output = "brisi.jsonl"
 
 import polars as pl
 import numpy as np
@@ -26,9 +26,9 @@ predictions = pl.read_ndjson(predictions).with_columns(
     .alias("word_idx")
 )
 
-assert predictions.filter(pl.col("primary_stress").list.len() == 0).shape[0] == 0, (
-    "There are predictions with no stress found!"
-)
+# assert predictions.filter(pl.col("primary_stress").list.len() == 0).shape[0] == 0, (
+#     "There are predictions with no stress found!"
+# )
 
 
 def backpropagate_predictions(row):
@@ -36,27 +36,34 @@ def backpropagate_predictions(row):
     subset = predictions.filter(pl.col("id").eq(rowid))
     # Edge case: if there is nothing to align, don't align
     if subset.shape[0] == 0:
-        return None
+        return []
     return_list = []
     for subsetrow in subset.iter_rows(named=True):
         idx = subsetrow["word_idx"]
-        start, stop = subsetrow["primary_stress"]
         multisyllabic_word = [
             i for i in row["multisyllabic_words"] if i["word_idx"] == idx
         ][0]
         nuclei = multisyllabic_word["nuclei"]
-        charalign = row["chars_align"][idx]
-        word = row["words_align"][idx]
-        offset = float(word["time_s"])
-        start, stop = start + offset, stop + offset
-        target = (start + stop) / 2
-        candidates = [charalign[i] for i in nuclei]
-        candidates_centroids = [(i["time_s"] + i["time_e"]) / 2 for i in candidates]
-        differences = [(i - target) ** 2 for i in candidates_centroids]
-        winner_index = np.argmin(differences)
-        winner = candidates[winner_index]
-        winner_index = charalign.index(winner)
-        return_list.append({"word_idx": idx, "stress": winner_index, "nuclei": nuclei})
+        try:
+            start, stop = subsetrow["primary_stress"]
+            charalign = row["chars_align"][idx]
+            word = row["words_align"][idx]
+            offset = float(word["time_s"])
+            start, stop = start + offset, stop + offset
+            target = (start + stop) / 2
+            candidates = [charalign[i] for i in nuclei]
+            candidates_centroids = [(i["time_s"] + i["time_e"]) / 2 for i in candidates]
+            differences = [(i - target) ** 2 for i in candidates_centroids]
+            winner_index = np.argmin(differences)
+            winner = candidates[winner_index]
+            winner_index = charalign.index(winner)
+            return_list.append(
+                {"word_idx": idx, "stress": winner_index, "nuclei": nuclei}
+            )
+        except ValueError:
+            return_list.append({"word_idx": idx, "stress": None, "nuclei": nuclei})
+        except TypeError:
+            return_list.append({"word_idx": idx, "stress": None, "nuclei": nuclei})
     return return_list
     2 + 2
 
@@ -73,6 +80,10 @@ return_dtype = pl.List(
         ]
     )
 )
+# for row in original.filter(
+#     pl.col("id").eq("ParlaMint-HR_2019-04-03-0.u135592_380-555")
+# ).iter_rows(named=True):
+#     backpropagate_predictions(row)
 
 original = original.with_columns(
     pl.struct(["id", "chars_align", "words_align", "multisyllabic_words"])

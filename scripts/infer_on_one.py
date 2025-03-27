@@ -2,8 +2,8 @@ try:
     injson = snakemake.input.jsonl
     output = snakemake.output.jsonl
 except NameError:
-    injson = "data/prep_segments/A44UFMcUAMU.jsonl"
-    output = "data/inferred/A44UFMcUAMU.jsonl"
+    injson = "data/prep_segments/HR/_A6u1Hz02e8.jsonl"
+    output = "data/inferred/HR/_A6u1Hz02e8.jsonl"
 
 import polars as pl
 from pathlib import Path
@@ -28,7 +28,7 @@ if torch.cuda.is_available():
 else:
     device = torch.device("cpu")
 
-model_name = "../parlastress/model_primstress_1e-5_20_1/checkpoint-4251"
+model_name = "5roop/Wav2Vec2BertPrimaryStressAudioFrameClassifier"
 feature_extractor = AutoFeatureExtractor.from_pretrained(model_name)
 model = Wav2Vec2BertForAudioFrameClassification.from_pretrained(model_name).to(device)
 
@@ -54,7 +54,7 @@ def frames_to_intervals(frames: list[int]) -> list[tuple[float]]:
                 (round(ndf.loc[si, "time_s"], 3), round(ndf.loc[ei, "time_s"], 3))
             )
     if results == []:
-        return None
+        return results
     # Post-processing: if multiple regions were returned, only the longest should be taken:
     if len(results) > 1:
         results = sorted(results, key=lambda t: t[1] - t[0], reverse=True)
@@ -92,7 +92,11 @@ ds = Dataset.from_pandas(df.to_pandas()).cast_column("audio", Audio(16000, mono=
 for i in ds:
     if i["audio"] is None:
         print(i)
-ds = ds.map(evaluator, batched=True, batch_size=128)
+ds = ds.map(evaluator, batched=True, batch_size=1)
 
 ds.to_polars().select(["segment_files", "id", "primary_stress"]).write_ndjson(output)
+from tqdm import tqdm
+
+for i in tqdm(df["audio"].to_list(), desc="Removing segments"):
+    Path(i).unlink()
 2 + 2
